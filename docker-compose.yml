@@ -1,0 +1,49 @@
+# Please refer https://aka.ms/HTTPSinContainer on how to setup an https developer certificate for your ASP.NET Core service.
+
+version: '3.4'
+
+networks:
+  dev:
+    driver: bridge
+
+services:
+  api:
+    image: docker.io/library/stockcomment-img
+    depends_on:
+      app_db:
+        condition: service_healthy
+    container_name: appdemo-service
+    ports:
+      - "80:80"
+      - "443:443"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - DbConnString=Host=app_db; Port=5432; Database=StockComment; Username=postgres; Password=postgres
+      - ASPNETCORE_URLS=http://+:80
+    networks:
+      - dev
+    
+  app_db:
+    image: postgres:latest
+    container_name: app_db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=StockComment
+    ports:
+      - "5432:5432"
+    restart: always
+    volumes:
+      - app_data:/var/lib/postgresql/data
+    networks:
+      - dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  app_data:
